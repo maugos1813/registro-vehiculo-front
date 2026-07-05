@@ -1,19 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Check, Loader2, Mail, Search, ShieldCheck, User, UserPlus, Users } from 'lucide-react';
 import { listarChoferes } from '../api/choferes';
-import { registrarUsuario, listarUsuarios } from '../api/auth';
+import { registrarUsuario, listarUsuarios, cambiarRolUsuario } from '../api/auth';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 
 const VACIO = { email: '', password: '', rol: 'CHOFER', choferId: null };
 
 export default function UsuariosScreen() {
   const { showToast } = useToast();
+  const { usuario: usuarioActual } = useAuth();
   const [choferes, setChoferes] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [cargandoUsuarios, setCargandoUsuarios] = useState(true);
   const [form, setForm] = useState(VACIO);
   const [busquedaChofer, setBusquedaChofer] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [cambiandoId, setCambiandoId] = useState(null);
 
   async function cargarUsuarios() {
     setCargandoUsuarios(true);
@@ -71,6 +74,23 @@ export default function UsuariosScreen() {
       showToast(err.message || 'No se pudo crear el usuario', 'error');
     } finally {
       setEnviando(false);
+    }
+  }
+
+  async function alternarRol(u) {
+    const nuevoRol = u.rol === 'ADMIN' ? 'CHOFER' : 'ADMIN';
+    setCambiandoId(u.id);
+    try {
+      const actualizado = await cambiarRolUsuario(u.id, nuevoRol);
+      setUsuarios((prev) => prev.map((x) => (x.id === u.id ? actualizado : x)));
+      showToast(
+        `${actualizado.email} ahora es ${nuevoRol === 'ADMIN' ? 'administrador' : 'chofer'}`,
+        'success'
+      );
+    } catch (err) {
+      showToast(err.message || 'No se pudo cambiar el rol', 'error');
+    } finally {
+      setCambiandoId(null);
     }
   }
 
@@ -220,14 +240,39 @@ export default function UsuariosScreen() {
                     {!u.activo && ' · inactivo'}
                   </div>
                 </div>
-                <span
-                  className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-pill text-xs font-bold ${
-                    u.rol === 'ADMIN' ? 'bg-ink/10 text-ink' : 'bg-toma-soft text-toma'
+                <button
+                  type="button"
+                  disabled={u.id === usuarioActual.id || cambiandoId === u.id}
+                  onClick={() => alternarRol(u)}
+                  title={u.id === usuarioActual.id ? 'No podés cambiar tu propio rol' : 'Cambiar rol'}
+                  className={`shrink-0 flex items-center gap-2 ${
+                    u.id === usuarioActual.id ? 'opacity-40' : ''
                   }`}
                 >
-                  {u.rol === 'ADMIN' ? <ShieldCheck size={13} /> : <User size={13} />}
-                  {u.rol === 'ADMIN' ? 'Admin' : 'Chofer'}
-                </span>
+                  <span
+                    className={`flex items-center gap-1 text-xs font-bold ${
+                      u.rol === 'ADMIN' ? 'text-ink' : 'text-muted'
+                    }`}
+                  >
+                    {u.rol === 'ADMIN' ? <ShieldCheck size={13} /> : <User size={13} />}
+                    Admin
+                  </span>
+                  {cambiandoId === u.id ? (
+                    <Loader2 size={16} className="animate-spin text-muted" />
+                  ) : (
+                    <span
+                      className={`relative w-11 h-6 rounded-pill transition-colors ${
+                        u.rol === 'ADMIN' ? 'bg-ink' : 'bg-line'
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-soft transition-transform ${
+                          u.rol === 'ADMIN' ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </span>
+                  )}
+                </button>
               </div>
             ))}
           </div>

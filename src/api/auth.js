@@ -27,3 +27,9 @@ export async function registrarUsuario(payload) {
   const { data } = await api.post('/api/auth/registrar', payload);
   return data.data;
 }
+
+// Solo ADMIN. rol: "ADMIN" | "CHOFER"
+export async function cambiarRolUsuario(id, rol) {
+  const { data } = await api.put(`/api/auth/usuarios/${id}/rol`, { rol });
+  return data.data;
+}
