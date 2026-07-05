@@ -5,6 +5,7 @@ import ComboBox from '../components/ui/ComboBox';
 import PhotoPicker from '../components/ui/PhotoPicker';
 import useClock from '../hooks/useClock';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import { listarChoferes } from '../api/choferes';
 import { listarVehiculos } from '../api/vehiculos';
 import { crearRegistro } from '../api/registros';
@@ -13,21 +14,29 @@ const VACIO = { choferNombre: '', targaVehiculo: '', comentarios: '', fotos: [] 
 
 export default function RegistrarScreen() {
   const { showToast } = useToast();
+  const { usuario } = useAuth();
   const now = useClock();
 
+  // Un chofer solo registra a su propio nombre: el backend ignora cualquier
+  // otro choferId/nombre que se le mande, así que acá directamente lo fijamos.
+  const esChofer = usuario.rol === 'CHOFER';
+  const nombreChoferFijo = usuario.chofer?.nombre || '';
+
   const [tipo, setTipo] = useState('TOMA');
-  const [form, setForm] = useState(VACIO);
+  const [form, setForm] = useState({ ...VACIO, choferNombre: esChofer ? nombreChoferFijo : '' });
   const [choferes, setChoferes] = useState([]);
   const [vehiculos, setVehiculos] = useState([]);
   const [enviando, setEnviando] = useState(false);
   const [progreso, setProgreso] = useState(0);
 
   useEffect(() => {
-    listarChoferes().then((data) => setChoferes(data.map((c) => c.nombre))).catch(() => {});
+    if (!esChofer) listarChoferes().then((data) => setChoferes(data.map((c) => c.nombre))).catch(() => {});
     listarVehiculos().then((data) => setVehiculos(data.map((v) => v.targa))).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const listo = form.choferNombre.trim() && form.targaVehiculo.trim() && !enviando;
+  const listo =
+    form.choferNombre.trim() && form.targaVehiculo.trim() && !enviando && (!esChofer || !!nombreChoferFijo);
 
   async function enviar(e) {
     e.preventDefault();
@@ -78,15 +87,33 @@ export default function RegistrarScreen() {
         <SegmentedToggle value={tipo} onChange={setTipo} />
 
         <div className="bg-surface rounded-bubble shadow-soft p-5 space-y-4">
-          <ComboBox
-            label="Chofer"
-            icon={User}
-            placeholder="Nombre del chofer"
-            value={form.choferNombre}
-            onChange={(v) => setForm((f) => ({ ...f, choferNombre: v }))}
-            options={choferes}
-            createLabel="Nuevo chofer"
-          />
+          {esChofer ? (
+            <div>
+              <label className="block text-[11px] font-semibold uppercase tracking-wide text-muted mb-1.5 ml-1">
+                Chofer
+              </label>
+              {nombreChoferFijo ? (
+                <div className="h-12 rounded-pill bg-canvas border border-line flex items-center gap-2 px-4 text-[15px] font-medium text-ink">
+                  <User size={18} className="text-muted" />
+                  {nombreChoferFijo}
+                </div>
+              ) : (
+                <div className="rounded-bubble bg-bad-soft text-bad text-sm px-4 py-3">
+                  Tu usuario no está vinculado a ningún chofer. Pedile a un administrador que lo configure.
+                </div>
+              )}
+            </div>
+          ) : (
+            <ComboBox
+              label="Chofer"
+              icon={User}
+              placeholder="Nombre del chofer"
+              value={form.choferNombre}
+              onChange={(v) => setForm((f) => ({ ...f, choferNombre: v }))}
+              options={choferes}
+              createLabel="Nuevo chofer"
+            />
+          )}
           <ComboBox
             label="Vehículo (targa)"
             icon={Car}

@@ -1,16 +1,17 @@
-import { ClipboardList, PlusCircle, Truck } from 'lucide-react';
+import { ClipboardList, PlusCircle, Truck, Users } from 'lucide-react';
 
-const TABS = [
+export const TABS = [
   { id: 'registrar', label: 'Registrar', icon: PlusCircle },
   { id: 'historial', label: 'Historial', icon: ClipboardList },
   { id: 'vehiculos', label: 'Flota', icon: Truck },
+  { id: 'usuarios', label: 'Usuarios', icon: Users, soloAdmin: true },
 ];
 
-export default function BottomNav({ active, onChange }) {
+export default function BottomNav({ active, onChange, tabs = TABS }) {
   return (
     <nav className="fixed bottom-5 left-0 right-0 z-40 flex justify-center px-4 pointer-events-none">
       <div className="pointer-events-auto flex items-center gap-1 bg-ink/90 backdrop-blur-xl rounded-pill p-1.5 shadow-floating">
-        {TABS.map((tab) => {
+        {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = active === tab.id;
           return (
