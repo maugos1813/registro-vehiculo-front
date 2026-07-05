@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, Loader2, Mail, Search, ShieldCheck, User, UserPlus, Users } from 'lucide-react';
-import { listarChoferes } from '../api/choferes';
-import { registrarUsuario, listarUsuarios, cambiarRolUsuario } from '../api/auth';
+import { Check, Loader2, Mail, Search, ShieldCheck, Trash2, User, UserPlus, Users } from 'lucide-react';
+import { listarChoferes, eliminarChofer } from '../api/choferes';
+import { registrarUsuario, listarUsuarios, cambiarRolUsuario, eliminarUsuario } from '../api/auth';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
+import BottomSheet from '../components/ui/BottomSheet';
 
 const VACIO = { email: '', password: '', rol: 'CHOFER', choferId: null };
 
@@ -17,6 +18,16 @@ export default function UsuariosScreen() {
   const [busquedaChofer, setBusquedaChofer] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [cambiandoId, setCambiandoId] = useState(null);
+  const [aEliminar, setAEliminar] = useState(null); // { tipo: 'usuario' | 'chofer', item }
+  const [eliminando, setEliminando] = useState(false);
+
+  async function cargarChoferes() {
+    try {
+      setChoferes(await listarChoferes());
+    } catch (err) {
+      showToast(err.message || 'No se pudo cargar la lista de choferes', 'error');
+    }
+  }
 
   async function cargarUsuarios() {
     setCargandoUsuarios(true);
@@ -30,7 +41,7 @@ export default function UsuariosScreen() {
   }
 
   useEffect(() => {
-    listarChoferes().then(setChoferes).catch(() => {});
+    cargarChoferes();
     cargarUsuarios();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -91,6 +102,29 @@ export default function UsuariosScreen() {
       showToast(err.message || 'No se pudo cambiar el rol', 'error');
     } finally {
       setCambiandoId(null);
+    }
+  }
+
+  async function confirmarEliminar() {
+    if (!aEliminar) return;
+    setEliminando(true);
+    try {
+      if (aEliminar.tipo === 'usuario') {
+        await eliminarUsuario(aEliminar.item.id);
+        setUsuarios((prev) => prev.filter((u) => u.id !== aEliminar.item.id));
+        showToast(`Usuario ${aEliminar.item.email} eliminado`, 'success');
+      } else {
+        await eliminarChofer(aEliminar.item.id);
+        setChoferes((prev) => prev.filter((c) => c.id !== aEliminar.item.id));
+        showToast(`Chofer ${aEliminar.item.nombre} eliminado`, 'success');
+        // Si tenía una cuenta vinculada, esa cuenta queda sin chofer: refrescamos para mostrarlo.
+        cargarUsuarios();
+      }
+      setAEliminar(null);
+    } catch (err) {
+      showToast(err.message || 'No se pudo eliminar', 'error');
+    } finally {
+      setEliminando(false);
     }
   }
 
@@ -232,52 +266,133 @@ export default function UsuariosScreen() {
         ) : (
           <div className="space-y-2.5">
             {usuarios.map((u) => (
-              <div key={u.id} className="bg-surface rounded-bubble shadow-soft p-4 flex items-center justify-between gap-3">
+              <div key={u.id} className="bg-surface rounded-bubble shadow-soft p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-ink truncate">{u.email}</div>
+                    <div className="text-xs text-muted truncate">
+                      {u.chofer?.nombre || (u.rol === 'ADMIN' ? 'Administrador' : 'Sin chofer vinculado')}
+                      {!u.activo && ' · inactivo'}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={u.id === usuarioActual.id}
+                    onClick={() => setAEliminar({ tipo: 'usuario', item: u })}
+                    title={u.id === usuarioActual.id ? 'No podés eliminar tu propia cuenta' : 'Eliminar usuario'}
+                    className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                      u.id === usuarioActual.id
+                        ? 'text-muted/40'
+                        : 'text-muted hover:text-bad hover:bg-bad-soft'
+                    }`}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+
+                <div className="flex justify-end mt-2">
+                  <button
+                    type="button"
+                    disabled={u.id === usuarioActual.id || cambiandoId === u.id}
+                    onClick={() => alternarRol(u)}
+                    title={u.id === usuarioActual.id ? 'No podés cambiar tu propio rol' : 'Cambiar rol'}
+                    className={`shrink-0 flex items-center gap-2 ${
+                      u.id === usuarioActual.id ? 'opacity-40' : ''
+                    }`}
+                  >
+                    <span
+                      className={`flex items-center gap-1 text-xs font-bold ${
+                        u.rol === 'ADMIN' ? 'text-ink' : 'text-muted'
+                      }`}
+                    >
+                      {u.rol === 'ADMIN' ? <ShieldCheck size={13} /> : <User size={13} />}
+                      Admin
+                    </span>
+                    {cambiandoId === u.id ? (
+                      <Loader2 size={16} className="animate-spin text-muted" />
+                    ) : (
+                      <span
+                        className={`relative w-11 h-6 rounded-pill transition-colors ${
+                          u.rol === 'ADMIN' ? 'bg-ink' : 'bg-line'
+                        }`}
+                      >
+                        <span
+                          className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-soft transition-transform ${
+                            u.rol === 'ADMIN' ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </span>
+                    )}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-8">
+        <h2 className="flex items-center gap-2 font-display font-bold text-lg text-ink mb-3">
+          <User size={18} /> Choferes registrados
+        </h2>
+        {choferes.length === 0 ? (
+          <div className="text-center py-10 text-muted text-sm">Todavía no hay choferes cargados.</div>
+        ) : (
+          <div className="space-y-2.5">
+            {choferes.map((c) => (
+              <div key={c.id} className="bg-surface rounded-bubble shadow-soft p-4 flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="font-semibold text-ink truncate">{u.email}</div>
+                  <div className="font-semibold text-ink truncate">{c.nombre}</div>
                   <div className="text-xs text-muted truncate">
-                    {u.chofer?.nombre || (u.rol === 'ADMIN' ? 'Administrador' : 'Sin chofer vinculado')}
-                    {!u.activo && ' · inactivo'}
+                    {choferIdsConCuenta.has(c.id) ? 'Tiene cuenta de usuario' : 'Sin cuenta de usuario'}
+                    {!c.activo && ' · inactivo'}
                   </div>
                 </div>
                 <button
                   type="button"
-                  disabled={u.id === usuarioActual.id || cambiandoId === u.id}
-                  onClick={() => alternarRol(u)}
-                  title={u.id === usuarioActual.id ? 'No podés cambiar tu propio rol' : 'Cambiar rol'}
-                  className={`shrink-0 flex items-center gap-2 ${
-                    u.id === usuarioActual.id ? 'opacity-40' : ''
-                  }`}
+                  onClick={() => setAEliminar({ tipo: 'chofer', item: c })}
+                  title="Eliminar chofer"
+                  className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted hover:text-bad hover:bg-bad-soft transition-colors"
                 >
-                  <span
-                    className={`flex items-center gap-1 text-xs font-bold ${
-                      u.rol === 'ADMIN' ? 'text-ink' : 'text-muted'
-                    }`}
-                  >
-                    {u.rol === 'ADMIN' ? <ShieldCheck size={13} /> : <User size={13} />}
-                    Admin
-                  </span>
-                  {cambiandoId === u.id ? (
-                    <Loader2 size={16} className="animate-spin text-muted" />
-                  ) : (
-                    <span
-                      className={`relative w-11 h-6 rounded-pill transition-colors ${
-                        u.rol === 'ADMIN' ? 'bg-ink' : 'bg-line'
-                      }`}
-                    >
-                      <span
-                        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-soft transition-transform ${
-                          u.rol === 'ADMIN' ? 'translate-x-5' : 'translate-x-0'
-                        }`}
-                      />
-                    </span>
-                  )}
+                  <Trash2 size={15} />
                 </button>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      <BottomSheet
+        open={!!aEliminar}
+        onClose={() => setAEliminar(null)}
+        title={aEliminar?.tipo === 'chofer' ? 'Eliminar chofer' : 'Eliminar usuario'}
+      >
+        {aEliminar && (
+          <div className="space-y-4">
+            <p className="text-sm text-ink/80">
+              {aEliminar.tipo === 'chofer' ? (
+                <>
+                  ¿Eliminar a <span className="font-semibold">{aEliminar.item.nombre}</span> de la lista de
+                  choferes? Si tiene registros cargados, no se va a poder eliminar.
+                </>
+              ) : (
+                <>
+                  ¿Eliminar la cuenta <span className="font-semibold">{aEliminar.item.email}</span>? Va a
+                  perder el acceso a la app.
+                </>
+              )}
+            </p>
+            <button
+              onClick={confirmarEliminar}
+              disabled={eliminando}
+              className="w-full h-12 rounded-pill bg-bad-soft text-bad font-semibold flex items-center justify-center gap-2"
+            >
+              {eliminando ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+              Eliminar
+            </button>
+          </div>
+        )}
+      </BottomSheet>
     </div>
   );
 }

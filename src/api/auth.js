@@ -33,3 +33,8 @@ export async function cambiarRolUsuario(id, rol) {
   const { data } = await api.put(`/api/auth/usuarios/${id}/rol`, { rol });
   return data.data;
 }
+
+// Solo ADMIN
+export async function eliminarUsuario(id) {
+  await api.delete(`/api/auth/usuarios/${id}`);
+}
