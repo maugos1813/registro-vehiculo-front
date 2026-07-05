@@ -1,36 +1,44 @@
 import { useEffect, useState } from 'react';
-import { Loader2, Search, User } from 'lucide-react';
+import { Loader2, Search, Trash2, User } from 'lucide-react';
 import { EstadoBadge } from '../components/ui/Badge';
-import { listarVehiculos } from '../api/vehiculos';
+import BottomSheet from '../components/ui/BottomSheet';
+import { listarVehiculos, actualizarVehiculo, eliminarVehiculo } from '../api/vehiculos';
 import { ultimoEstadoVehiculo } from '../api/registros';
 import { formatRelativo } from '../utils/format';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function VehiculosScreen() {
   const { showToast } = useToast();
+  const { usuario } = useAuth();
+  const esAdmin = usuario.rol === 'ADMIN';
   const [items, setItems] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState('');
+  const [cambiandoActivoId, setCambiandoActivoId] = useState(null);
+  const [aEliminar, setAEliminar] = useState(null);
+  const [eliminando, setEliminando] = useState(false);
+
+  async function cargar() {
+    setCargando(true);
+    try {
+      const vehiculos = await listarVehiculos();
+      const conEstado = await Promise.all(
+        vehiculos.map(async (v) => {
+          const ultimo = await ultimoEstadoVehiculo(v.id).catch(() => null);
+          const tomado = ultimo?.tipo === 'TOMA';
+          return { ...v, ultimo, tomado };
+        })
+      );
+      setItems(conEstado);
+    } catch (err) {
+      showToast(err.message || 'No se pudo cargar la flota', 'error');
+    } finally {
+      setCargando(false);
+    }
+  }
 
   useEffect(() => {
-    async function cargar() {
-      setCargando(true);
-      try {
-        const vehiculos = await listarVehiculos();
-        const conEstado = await Promise.all(
-          vehiculos.map(async (v) => {
-            const ultimo = await ultimoEstadoVehiculo(v.id).catch(() => null);
-            const tomado = ultimo?.tipo === 'TOMA';
-            return { ...v, ultimo, tomado };
-          })
-        );
-        setItems(conEstado);
-      } catch (err) {
-        showToast(err.message || 'No se pudo cargar la flota', 'error');
-      } finally {
-        setCargando(false);
-      }
-    }
     cargar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -42,6 +50,34 @@ export default function VehiculosScreen() {
   });
 
   const enUso = filtrados.filter((v) => v.tomado).length;
+
+  async function alternarActivoVehiculo(v) {
+    setCambiandoActivoId(v.id);
+    try {
+      const actualizado = await actualizarVehiculo(v.id, { activo: !v.activo });
+      setItems((prev) => prev.map((x) => (x.id === v.id ? { ...x, ...actualizado } : x)));
+      showToast(`${actualizado.targa} ahora está ${actualizado.activo ? 'activo' : 'inactivo'}`, 'success');
+    } catch (err) {
+      showToast(err.message || 'No se pudo actualizar el vehículo', 'error');
+    } finally {
+      setCambiandoActivoId(null);
+    }
+  }
+
+  async function confirmarEliminarVehiculo() {
+    if (!aEliminar) return;
+    setEliminando(true);
+    try {
+      await eliminarVehiculo(aEliminar.id);
+      setItems((prev) => prev.filter((v) => v.id !== aEliminar.id));
+      showToast(`Vehículo ${aEliminar.targa} eliminado`, 'success');
+      setAEliminar(null);
+    } catch (err) {
+      showToast(err.message || 'No se pudo eliminar', 'error');
+    } finally {
+      setEliminando(false);
+    }
+  }
 
   return (
     <div className="px-5 pt-6 pb-32 max-w-md md:max-w-3xl lg:max-w-5xl mx-auto">
@@ -77,7 +113,10 @@ export default function VehiculosScreen() {
                 <span className="font-display font-bold text-lg text-ink">{v.targa}</span>
                 <EstadoBadge tomado={v.tomado} />
               </div>
-              <div className="text-sm text-muted mb-2">{v.modelo || 'Sin modelo especificado'}</div>
+              <div className="text-sm text-muted mb-2">
+                {v.modelo || 'Sin modelo especificado'}
+                {!v.activo && ' · inactivo'}
+              </div>
               {v.ultimo ? (
                 <div className="flex items-center gap-1.5 text-sm text-ink/80 bg-canvas rounded-pill px-3 py-1.5 w-fit">
                   <User size={13} />
@@ -86,10 +125,68 @@ export default function VehiculosScreen() {
               ) : (
                 <div className="text-sm text-muted italic">Sin movimientos registrados</div>
               )}
+
+              {esAdmin && (
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-line">
+                  <button
+                    type="button"
+                    disabled={cambiandoActivoId === v.id}
+                    onClick={() => alternarActivoVehiculo(v)}
+                    title={v.activo ? 'Marcar como inactivo' : 'Marcar como activo'}
+                    className="shrink-0 flex items-center gap-2"
+                  >
+                    <span className={`text-xs font-bold ${v.activo ? 'text-ink' : 'text-muted'}`}>
+                      {v.activo ? 'Activo' : 'Inactivo'}
+                    </span>
+                    {cambiandoActivoId === v.id ? (
+                      <Loader2 size={16} className="animate-spin text-muted" />
+                    ) : (
+                      <span
+                        className={`relative w-11 h-6 rounded-pill transition-colors ${
+                          v.activo ? 'bg-good' : 'bg-line'
+                        }`}
+                      >
+                        <span
+                          className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-soft transition-transform ${
+                            v.activo ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAEliminar(v)}
+                    title="Eliminar vehículo"
+                    className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted hover:text-bad hover:bg-bad-soft transition-colors"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
+
+      <BottomSheet open={!!aEliminar} onClose={() => setAEliminar(null)} title="Eliminar vehículo">
+        {aEliminar && (
+          <div className="space-y-4">
+            <p className="text-sm text-ink/80">
+              ¿Eliminar el vehículo <span className="font-semibold">{aEliminar.targa}</span> de la flota? Si
+              tiene registros cargados, no se va a poder eliminar.
+            </p>
+            <button
+              onClick={confirmarEliminarVehiculo}
+              disabled={eliminando}
+              className="w-full h-12 rounded-pill bg-bad-soft text-bad font-semibold flex items-center justify-center gap-2"
+            >
+              {eliminando ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+              Eliminar
+            </button>
+          </div>
+        )}
+      </BottomSheet>
     </div>
   );
 }

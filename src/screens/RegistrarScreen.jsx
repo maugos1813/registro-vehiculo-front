@@ -33,7 +33,7 @@ export default function RegistrarScreen() {
     if (!esChofer) {
       listarChoferes({ activo: true }).then((data) => setChoferes(data.map((c) => c.nombre))).catch(() => {});
     }
-    listarVehiculos().then((data) => setVehiculos(data.map((v) => v.targa))).catch(() => {});
+    listarVehiculos({ activo: true }).then((data) => setVehiculos(data.map((v) => v.targa))).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
