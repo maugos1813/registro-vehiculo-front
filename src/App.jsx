@@ -6,6 +6,7 @@ import HistorialScreen from './screens/HistorialScreen';
 import VehiculosScreen from './screens/VehiculosScreen';
 import UsuariosScreen from './screens/UsuariosScreen';
 import LoginScreen from './screens/LoginScreen';
+import ResetPasswordScreen from './screens/ResetPasswordScreen';
 import { ToastProvider } from './context/ToastContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
@@ -52,11 +53,17 @@ function AppShell() {
 }
 
 export default function App() {
+  const resetToken = new URLSearchParams(window.location.search).get('token');
+
   return (
     <ToastProvider>
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>
+      {resetToken ? (
+        <ResetPasswordScreen token={resetToken} />
+      ) : (
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      )}
     </ToastProvider>
   );
 }

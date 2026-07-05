@@ -16,6 +16,16 @@ export async function registrarse(nombre, email, password) {
   return data.data; // { token, usuario }
 }
 
+export async function solicitarRecuperacion(email) {
+  const { data } = await api.post('/api/auth/forgot-password', { email });
+  return data.mensaje;
+}
+
+export async function restablecerPassword(token, password) {
+  const { data } = await api.post('/api/auth/reset-password', { token, password });
+  return data.mensaje;
+}
+
 // Solo ADMIN
 export async function listarUsuarios() {
   const { data } = await api.get('/api/auth/usuarios');
