@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { login as loginRequest, obtenerPerfil } from '../api/auth';
+import { login as loginRequest, obtenerPerfil, registrarse as registrarseRequest } from '../api/auth';
 import { TOKEN_KEY, setOnNoAutorizado } from '../api/client';
 
 const AuthContext = createContext(null);
@@ -35,8 +35,14 @@ export function AuthProvider({ children }) {
     setUsuario(u);
   }
 
+  async function registrarse(nombre, email, password) {
+    const { token, usuario: u } = await registrarseRequest(nombre, email, password);
+    localStorage.setItem(TOKEN_KEY, token);
+    setUsuario(u);
+  }
+
   return (
-    <AuthContext.Provider value={{ usuario, cargando, iniciarSesion, cerrarSesion }}>
+    <AuthContext.Provider value={{ usuario, cargando, iniciarSesion, registrarse, cerrarSesion }}>
       {children}
     </AuthContext.Provider>
   );

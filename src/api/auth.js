@@ -10,6 +10,12 @@ export async function obtenerPerfil() {
   return data.data;
 }
 
+// Autorregistro público como CHOFER (sin necesitar un admin)
+export async function registrarse(nombre, email, password) {
+  const { data } = await api.post('/api/auth/registro', { nombre, email, password });
+  return data.data; // { token, usuario }
+}
+
 // Solo ADMIN
 export async function listarUsuarios() {
   const { data } = await api.get('/api/auth/usuarios');
