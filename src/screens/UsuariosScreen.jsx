@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Check, Eye, EyeOff, Loader2, Mail, Search, ShieldCheck, Trash2, User, UserPlus, Users } from 'lucide-react';
-import { listarChoferes, eliminarChofer } from '../api/choferes';
+import { listarChoferes, eliminarChofer, actualizarChofer } from '../api/choferes';
 import { registrarUsuario, listarUsuarios, cambiarRolUsuario, eliminarUsuario } from '../api/auth';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
@@ -18,6 +18,7 @@ export default function UsuariosScreen() {
   const [busquedaChofer, setBusquedaChofer] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [cambiandoId, setCambiandoId] = useState(null);
+  const [cambiandoActivoId, setCambiandoActivoId] = useState(null);
   const [aEliminar, setAEliminar] = useState(null); // { tipo: 'usuario' | 'chofer', item }
   const [eliminando, setEliminando] = useState(false);
   const [verPassword, setVerPassword] = useState(false);
@@ -53,7 +54,7 @@ export default function UsuariosScreen() {
   );
 
   const choferesFiltrados = useMemo(() => {
-    const disponibles = choferes.filter((c) => !choferIdsConCuenta.has(c.id));
+    const disponibles = choferes.filter((c) => !choferIdsConCuenta.has(c.id) && c.activo);
     const q = busquedaChofer.trim().toLowerCase();
     if (!q) return disponibles;
     return disponibles.filter((c) => c.nombre.toLowerCase().includes(q));
@@ -103,6 +104,22 @@ export default function UsuariosScreen() {
       showToast(err.message || 'No se pudo cambiar el rol', 'error');
     } finally {
       setCambiandoId(null);
+    }
+  }
+
+  async function alternarActivoChofer(c) {
+    setCambiandoActivoId(c.id);
+    try {
+      const actualizado = await actualizarChofer(c.id, { activo: !c.activo });
+      setChoferes((prev) => prev.map((x) => (x.id === c.id ? actualizado : x)));
+      showToast(
+        `${actualizado.nombre} ahora está ${actualizado.activo ? 'activo' : 'inactivo'}`,
+        'success'
+      );
+    } catch (err) {
+      showToast(err.message || 'No se pudo actualizar el chofer', 'error');
+    } finally {
+      setCambiandoActivoId(null);
     }
   }
 
@@ -351,22 +368,52 @@ export default function UsuariosScreen() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
             {choferes.map((c) => (
-              <div key={c.id} className="bg-surface rounded-bubble shadow-soft p-4 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="font-semibold text-ink truncate">{c.nombre}</div>
-                  <div className="text-xs text-muted truncate">
-                    {choferIdsConCuenta.has(c.id) ? 'Tiene cuenta de usuario' : 'Sin cuenta de usuario'}
-                    {!c.activo && ' · inactivo'}
+              <div key={c.id} className="bg-surface rounded-bubble shadow-soft p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-ink truncate">{c.nombre}</div>
+                    <div className="text-xs text-muted truncate">
+                      {choferIdsConCuenta.has(c.id) ? 'Tiene cuenta de usuario' : 'Sin cuenta de usuario'}
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setAEliminar({ tipo: 'chofer', item: c })}
+                    title="Eliminar chofer"
+                    className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted hover:text-bad hover:bg-bad-soft transition-colors"
+                  >
+                    <Trash2 size={15} />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setAEliminar({ tipo: 'chofer', item: c })}
-                  title="Eliminar chofer"
-                  className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted hover:text-bad hover:bg-bad-soft transition-colors"
-                >
-                  <Trash2 size={15} />
-                </button>
+
+                <div className="flex justify-end mt-2">
+                  <button
+                    type="button"
+                    disabled={cambiandoActivoId === c.id}
+                    onClick={() => alternarActivoChofer(c)}
+                    title={c.activo ? 'Marcar como inactivo' : 'Marcar como activo'}
+                    className="shrink-0 flex items-center gap-2"
+                  >
+                    <span className={`text-xs font-bold ${c.activo ? 'text-ink' : 'text-muted'}`}>
+                      {c.activo ? 'Activo' : 'Inactivo'}
+                    </span>
+                    {cambiandoActivoId === c.id ? (
+                      <Loader2 size={16} className="animate-spin text-muted" />
+                    ) : (
+                      <span
+                        className={`relative w-11 h-6 rounded-pill transition-colors ${
+                          c.activo ? 'bg-good' : 'bg-line'
+                        }`}
+                      >
+                        <span
+                          className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-soft transition-transform ${
+                            c.activo ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </span>
+                    )}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
