@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Loader2, Search, Trash2, User } from 'lucide-react';
+import { Car, Loader2, Pencil, Search, Trash2, User } from 'lucide-react';
 import { EstadoBadge } from '../components/ui/Badge';
 import BottomSheet from '../components/ui/BottomSheet';
 import { listarVehiculos, actualizarVehiculo, eliminarVehiculo } from '../api/vehiculos';
@@ -18,6 +18,9 @@ export default function VehiculosScreen() {
   const [cambiandoActivoId, setCambiandoActivoId] = useState(null);
   const [aEliminar, setAEliminar] = useState(null);
   const [eliminando, setEliminando] = useState(false);
+  const [aEditar, setAEditar] = useState(null);
+  const [formEdicion, setFormEdicion] = useState({ targa: '', modelo: '' });
+  const [guardando, setGuardando] = useState(false);
 
   async function cargar() {
     setCargando(true);
@@ -61,6 +64,30 @@ export default function VehiculosScreen() {
       showToast(err.message || 'No se pudo actualizar el vehículo', 'error');
     } finally {
       setCambiandoActivoId(null);
+    }
+  }
+
+  function abrirEdicion(v) {
+    setFormEdicion({ targa: v.targa, modelo: v.modelo || '' });
+    setAEditar(v);
+  }
+
+  async function confirmarEdicion(e) {
+    e.preventDefault();
+    if (!aEditar || !formEdicion.targa.trim()) return;
+    setGuardando(true);
+    try {
+      const actualizado = await actualizarVehiculo(aEditar.id, {
+        targa: formEdicion.targa.trim(),
+        modelo: formEdicion.modelo.trim(),
+      });
+      setItems((prev) => prev.map((x) => (x.id === aEditar.id ? { ...x, ...actualizado } : x)));
+      showToast(`Vehículo ${actualizado.targa} actualizado`, 'success');
+      setAEditar(null);
+    } catch (err) {
+      showToast(err.message || 'No se pudo actualizar el vehículo', 'error');
+    } finally {
+      setGuardando(false);
     }
   }
 
@@ -154,14 +181,24 @@ export default function VehiculosScreen() {
                       </span>
                     )}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setAEliminar(v)}
-                    title="Eliminar vehículo"
-                    className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted hover:text-bad hover:bg-bad-soft transition-colors"
-                  >
-                    <Trash2 size={15} />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => abrirEdicion(v)}
+                      title="Editar vehículo"
+                      className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted hover:text-toma hover:bg-toma-soft transition-colors"
+                    >
+                      <Pencil size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAEliminar(v)}
+                      title="Eliminar vehículo"
+                      className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted hover:text-bad hover:bg-bad-soft transition-colors"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -185,6 +222,50 @@ export default function VehiculosScreen() {
               Eliminar
             </button>
           </div>
+        )}
+      </BottomSheet>
+
+      <BottomSheet open={!!aEditar} onClose={() => setAEditar(null)} title="Editar vehículo">
+        {aEditar && (
+          <form onSubmit={confirmarEdicion} className="space-y-4">
+            <div>
+              <label className="block text-[11px] font-semibold uppercase tracking-wide text-muted mb-1.5 ml-1">
+                Targa
+              </label>
+              <div className="relative">
+                <Car size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
+                <input
+                  type="text"
+                  value={formEdicion.targa}
+                  onChange={(e) => setFormEdicion((f) => ({ ...f, targa: e.target.value }))}
+                  placeholder="Ej. AB123CD"
+                  className="w-full h-12 pl-11 pr-4 rounded-pill bg-canvas border border-line focus:border-toma focus:outline-none text-[15px] placeholder:text-muted/70 transition-colors"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold uppercase tracking-wide text-muted mb-1.5 ml-1">
+                Modelo (opcional)
+              </label>
+              <input
+                type="text"
+                value={formEdicion.modelo}
+                onChange={(e) => setFormEdicion((f) => ({ ...f, modelo: e.target.value }))}
+                placeholder="Ej. Renault Kangoo"
+                className="w-full h-12 px-4 rounded-pill bg-canvas border border-line focus:border-toma focus:outline-none text-[15px] placeholder:text-muted/70 transition-colors"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={guardando || !formEdicion.targa.trim()}
+              className={`w-full h-12 rounded-pill font-display font-bold flex items-center justify-center gap-2 transition-colors ${
+                formEdicion.targa.trim() ? 'bg-toma text-white' : 'bg-line text-muted'
+              }`}
+            >
+              {guardando ? <Loader2 size={16} className="animate-spin" /> : <Pencil size={16} />}
+              Guardar cambios
+            </button>
+          </form>
         )}
       </BottomSheet>
     </div>
