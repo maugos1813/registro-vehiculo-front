@@ -70,8 +70,8 @@ export default function RegistrarScreen() {
   }
 
   return (
-    <div className="px-5 pt-6 pb-32 max-w-md mx-auto">
-      <header className="mb-6">
+    <div className="px-5 pt-6 pb-32 max-w-md md:max-w-3xl lg:max-w-5xl mx-auto">
+      <header className="mb-6 md:max-w-xl md:mx-auto">
         <h1 className="font-display font-extrabold text-[26px] leading-tight text-ink">
           Registrar movimiento
         </h1>
@@ -83,7 +83,7 @@ export default function RegistrarScreen() {
         </p>
       </header>
 
-      <form onSubmit={enviar} className="space-y-5">
+      <form onSubmit={enviar} className="space-y-5 md:max-w-xl md:mx-auto">
         <SegmentedToggle value={tipo} onChange={setTipo} />
 
         <div className="bg-surface rounded-bubble shadow-soft p-5 space-y-4">

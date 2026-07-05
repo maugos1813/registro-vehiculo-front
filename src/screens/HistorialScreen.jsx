@@ -63,7 +63,7 @@ export default function HistorialScreen() {
   }
 
   return (
-    <div className="px-5 pt-6 pb-32 max-w-md mx-auto">
+    <div className="px-5 pt-6 pb-32 max-w-md md:max-w-3xl lg:max-w-5xl mx-auto">
       <header className="mb-5">
         <h1 className="font-display font-extrabold text-[26px] text-ink">Historial</h1>
         <p className="text-muted text-sm mt-1">Todos los movimientos registrados por la flota</p>
@@ -101,7 +101,7 @@ export default function HistorialScreen() {
       ) : filtrados.length === 0 ? (
         <div className="text-center py-16 text-muted text-sm">Sin registros todavía.</div>
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtrados.map((r) => (
             <button
               key={r.id}

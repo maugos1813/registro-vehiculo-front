@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, Loader2, Mail, Search, ShieldCheck, Trash2, User, UserPlus, Users } from 'lucide-react';
+import { Check, Eye, EyeOff, Loader2, Mail, Search, ShieldCheck, Trash2, User, UserPlus, Users } from 'lucide-react';
 import { listarChoferes, eliminarChofer } from '../api/choferes';
 import { registrarUsuario, listarUsuarios, cambiarRolUsuario, eliminarUsuario } from '../api/auth';
 import { useToast } from '../context/ToastContext';
@@ -20,6 +20,7 @@ export default function UsuariosScreen() {
   const [cambiandoId, setCambiandoId] = useState(null);
   const [aEliminar, setAEliminar] = useState(null); // { tipo: 'usuario' | 'chofer', item }
   const [eliminando, setEliminando] = useState(false);
+  const [verPassword, setVerPassword] = useState(false);
 
   async function cargarChoferes() {
     try {
@@ -129,13 +130,13 @@ export default function UsuariosScreen() {
   }
 
   return (
-    <div className="px-5 pt-6 pb-32 max-w-md mx-auto">
-      <header className="mb-6">
+    <div className="px-5 pt-6 pb-32 max-w-md md:max-w-3xl lg:max-w-5xl mx-auto">
+      <header className="mb-6 md:max-w-xl md:mx-auto">
         <h1 className="font-display font-extrabold text-[26px] text-ink">Usuarios</h1>
         <p className="text-muted text-sm mt-1">Creá el acceso para un chofer o un administrador</p>
       </header>
 
-      <form onSubmit={enviar} className="space-y-5">
+      <form onSubmit={enviar} className="space-y-5 md:max-w-xl md:mx-auto">
         <div className="bg-surface rounded-bubble shadow-soft p-5 space-y-4">
           <div>
             <label className="block text-[11px] font-semibold uppercase tracking-wide text-muted mb-1.5 ml-1">
@@ -157,13 +158,23 @@ export default function UsuariosScreen() {
             <label className="block text-[11px] font-semibold uppercase tracking-wide text-muted mb-1.5 ml-1">
               Contraseña provisoria
             </label>
-            <input
-              type="text"
-              value={form.password}
-              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-              placeholder="Mínimo 6 caracteres"
-              className="w-full h-12 px-4 rounded-pill bg-canvas border border-line focus:border-toma focus:outline-none text-[15px] placeholder:text-muted/70 transition-colors"
-            />
+            <div className="relative">
+              <input
+                type={verPassword ? 'text' : 'password'}
+                value={form.password}
+                onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                placeholder="Mínimo 6 caracteres"
+                className="w-full h-12 pl-4 pr-11 rounded-pill bg-canvas border border-line focus:border-toma focus:outline-none text-[15px] placeholder:text-muted/70 transition-colors"
+              />
+              <button
+                type="button"
+                onClick={() => setVerPassword((v) => !v)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors"
+                aria-label={verPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              >
+                {verPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
           <div>
@@ -264,7 +275,7 @@ export default function UsuariosScreen() {
         ) : usuarios.length === 0 ? (
           <div className="text-center py-10 text-muted text-sm">Todavía no hay usuarios creados.</div>
         ) : (
-          <div className="space-y-2.5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
             {usuarios.map((u) => (
               <div key={u.id} className="bg-surface rounded-bubble shadow-soft p-4">
                 <div className="flex items-start justify-between gap-3">
@@ -338,7 +349,7 @@ export default function UsuariosScreen() {
         {choferes.length === 0 ? (
           <div className="text-center py-10 text-muted text-sm">Todavía no hay choferes cargados.</div>
         ) : (
-          <div className="space-y-2.5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
             {choferes.map((c) => (
               <div key={c.id} className="bg-surface rounded-bubble shadow-soft p-4 flex items-center justify-between gap-3">
                 <div className="min-w-0">

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Loader2, Lock, LogIn, Mail, User, UserPlus } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Lock, LogIn, Mail, User, UserPlus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import hero from '../assets/hero.png';
@@ -12,6 +12,7 @@ export default function LoginScreen() {
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [verPassword, setVerPassword] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
   const esRegistro = modo === 'registro';
@@ -105,13 +106,21 @@ export default function LoginScreen() {
             <div className="relative">
               <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
               <input
-                type="password"
+                type={verPassword ? 'text' : 'password'}
                 autoComplete={esRegistro ? 'new-password' : 'current-password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={esRegistro ? 'Mínimo 6 caracteres' : '••••••••'}
-                className="w-full h-12 pl-11 pr-4 rounded-pill bg-canvas border border-line focus:border-toma focus:outline-none text-[15px] placeholder:text-muted/70 transition-colors"
+                className="w-full h-12 pl-11 pr-11 rounded-pill bg-canvas border border-line focus:border-toma focus:outline-none text-[15px] placeholder:text-muted/70 transition-colors"
               />
+              <button
+                type="button"
+                onClick={() => setVerPassword((v) => !v)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors"
+                aria-label={verPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              >
+                {verPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
         </div>

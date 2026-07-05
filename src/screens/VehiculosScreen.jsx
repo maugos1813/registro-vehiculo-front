@@ -44,7 +44,7 @@ export default function VehiculosScreen() {
   const enUso = filtrados.filter((v) => v.tomado).length;
 
   return (
-    <div className="px-5 pt-6 pb-32 max-w-md mx-auto">
+    <div className="px-5 pt-6 pb-32 max-w-md md:max-w-3xl lg:max-w-5xl mx-auto">
       <header className="mb-5">
         <h1 className="font-display font-extrabold text-[26px] text-ink">Flota</h1>
         <p className="text-muted text-sm mt-1">
@@ -70,7 +70,7 @@ export default function VehiculosScreen() {
       ) : filtrados.length === 0 ? (
         <div className="text-center py-16 text-muted text-sm">No hay vehículos registrados todavía.</div>
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtrados.map((v) => (
             <div key={v.id} className="bg-surface rounded-bubble shadow-soft p-4">
               <div className="flex items-center justify-between mb-1">

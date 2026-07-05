@@ -31,7 +31,7 @@ function AppShell() {
 
   return (
     <div className="min-h-screen bg-canvas">
-      <div className="flex items-center justify-end gap-2 px-5 pt-4 max-w-md mx-auto">
+      <div className="flex items-center justify-end gap-2 px-5 pt-4 max-w-md md:max-w-3xl lg:max-w-5xl mx-auto">
         <span className="text-xs text-muted truncate max-w-[65%]">{usuario.email}</span>
         <button
           onClick={cerrarSesion}
