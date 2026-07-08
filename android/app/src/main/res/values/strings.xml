@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">RegistrosGT</string>
+    <string name="title_activity_main">RegistrosGT</string>
+    <string name="package_name">cl.gamaagostinelli.registrosgt</string>
+    <string name="custom_url_scheme">cl.gamaagostinelli.registrosgt</string>
+</resources>
