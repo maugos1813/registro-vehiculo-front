@@ -4,7 +4,7 @@ import { ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
  * Selector segmentado tipo "burbuja deslizante" — el elemento firma de la app.
  * Una sola cápsula donde una burbuja de color se desliza entre dos mitades.
  */
-export default function SegmentedToggle({ value, onChange }) {
+export default function SegmentedToggle({ value, onChange, deshabilitarToma }) {
   const isToma = value === 'TOMA';
 
   return (
@@ -18,9 +18,10 @@ export default function SegmentedToggle({ value, onChange }) {
       <button
         type="button"
         onClick={() => onChange('TOMA')}
+        disabled={deshabilitarToma}
         className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-pill font-display font-semibold text-[15px] transition-colors duration-300 ${
-          isToma ? 'text-white' : 'text-muted'
-        }`}
+          deshabilitarToma ? 'opacity-40 cursor-not-allowed' : ''
+        } ${isToma ? 'text-white' : 'text-muted'}`}
       >
         <ArrowDownToLine size={18} strokeWidth={2.5} />
         Tomar

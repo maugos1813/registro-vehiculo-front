@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Car, Loader2, User } from 'lucide-react';
+import { Car, Info, Loader2, User } from 'lucide-react';
 import SegmentedToggle from '../components/ui/SegmentedToggle';
 import ComboBox from '../components/ui/ComboBox';
 import PhotoPicker from '../components/ui/PhotoPicker';
@@ -8,7 +8,7 @@ import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { listarChoferes } from '../api/choferes';
 import { listarVehiculos } from '../api/vehiculos';
-import { crearRegistro } from '../api/registros';
+import { crearRegistro, ultimoEstadoChofer } from '../api/registros';
 
 const VACIO = { choferNombre: '', targaVehiculo: '', comentarios: '', fotos: [] };
 
@@ -25,17 +25,62 @@ export default function RegistrarScreen() {
   const [tipo, setTipo] = useState('TOMA');
   const [form, setForm] = useState({ ...VACIO, choferNombre: esChofer ? nombreChoferFijo : '' });
   const [choferes, setChoferes] = useState([]);
+  const [choferesConId, setChoferesConId] = useState([]);
   const [vehiculos, setVehiculos] = useState([]);
   const [enviando, setEnviando] = useState(false);
   const [progreso, setProgreso] = useState(0);
+  const [estadoChofer, setEstadoChofer] = useState(null);
 
   useEffect(() => {
     if (!esChofer) {
-      listarChoferes({ activo: true }).then((data) => setChoferes(data.map((c) => c.nombre))).catch(() => {});
+      listarChoferes({ activo: true })
+        .then((data) => {
+          setChoferesConId(data);
+          setChoferes(data.map((c) => c.nombre));
+        })
+        .catch(() => {});
     }
     listarVehiculos({ activo: true }).then((data) => setVehiculos(data.map((v) => v.targa))).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // El chofer "actual" del formulario: fijo si es rol CHOFER, o el que eligió/tipeó el admin
+  const choferIdActual = esChofer
+    ? usuario.chofer?.id
+    : choferesConId.find((c) => c.nombre === form.choferNombre.trim())?.id;
+
+  useEffect(() => {
+    if (!choferIdActual) {
+      setEstadoChofer(null);
+      return;
+    }
+    let cancelado = false;
+    ultimoEstadoChofer(choferIdActual)
+      .then((data) => {
+        if (cancelado) return;
+        setEstadoChofer(data);
+        if (data?.tipo === 'TOMA') {
+          setTipo('DEJA');
+          setForm((f) => ({ ...f, targaVehiculo: data.vehiculo.targa }));
+        }
+      })
+      .catch(() => {
+        if (!cancelado) setEstadoChofer(null);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [choferIdActual]);
+
+  const tieneVehiculoTomado = estadoChofer?.tipo === 'TOMA';
+
+  function cambiarTipo(nuevo) {
+    if (nuevo === 'TOMA' && tieneVehiculoTomado) {
+      showToast(`Primero tenés que dejar el vehículo ${estadoChofer.vehiculo.targa}`, 'error');
+      return;
+    }
+    setTipo(nuevo);
+  }
 
   const listo =
     form.choferNombre.trim() && form.targaVehiculo.trim() && !enviando && (!esChofer || !!nombreChoferFijo);
@@ -57,6 +102,11 @@ export default function RegistrarScreen() {
         { onProgress: setProgreso }
       );
       showToast(tipo === 'TOMA' ? '¡Vehículo tomado! Registro guardado' : '¡Vehículo entregado! Registro guardado', 'success');
+      // Actualiza el estado local del chofer: si dejó, vuelve a poder tomar otro;
+      // si tomó, queda "con" ese vehículo hasta que lo deje.
+      setEstadoChofer(
+        tipo === 'DEJA' ? null : { tipo: 'TOMA', vehiculo: { targa: form.targaVehiculo.trim().toUpperCase() } }
+      );
       // Mantiene chofer y vehículo (turnos seguidos) pero limpia comentarios y fotos
       setForm((f) => ({ ...f, comentarios: '', fotos: [] }));
       if (!choferes.includes(form.choferNombre.trim())) setChoferes((c) => [...c, form.choferNombre.trim()]);
@@ -86,7 +136,17 @@ export default function RegistrarScreen() {
       </header>
 
       <form onSubmit={enviar} className="space-y-5 md:max-w-xl md:mx-auto">
-        <SegmentedToggle value={tipo} onChange={setTipo} />
+        <SegmentedToggle value={tipo} onChange={cambiarTipo} deshabilitarToma={tieneVehiculoTomado} />
+
+        {tieneVehiculoTomado && (
+          <div className="rounded-bubble bg-deja-soft text-deja text-sm px-4 py-3 flex items-start gap-2">
+            <Info size={16} className="shrink-0 mt-0.5" />
+            <span>
+              Ya tenés el vehículo <strong>{estadoChofer.vehiculo.targa}</strong> tomado. Dejalo primero para poder
+              tomar otro.
+            </span>
+          </div>
+        )}
 
         <div className="bg-surface rounded-bubble shadow-soft p-5 space-y-4">
           {esChofer ? (

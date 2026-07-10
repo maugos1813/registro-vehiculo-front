@@ -15,6 +15,11 @@ export async function ultimoEstadoVehiculo(vehiculoId) {
   return data.data;
 }
 
+export async function ultimoEstadoChofer(choferId) {
+  const { data } = await api.get(`/api/registros/ultimo-chofer/${choferId}`);
+  return data.data;
+}
+
 // payload: { tipo, choferNombre, targaVehiculo, comentarios, fotos: File[] }
 export async function crearRegistro(payload, { onProgress } = {}) {
   const form = new FormData();
