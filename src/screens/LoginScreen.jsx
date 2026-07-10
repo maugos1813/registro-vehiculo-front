@@ -56,7 +56,7 @@ export default function LoginScreen() {
   return (
     <div className="min-h-screen flex flex-col justify-center px-6 py-10 max-w-md mx-auto">
       <div className="flex justify-center mb-6">
-        <img src={hero} alt="" className="w-32 h-32 object-contain animate-float-y" />
+        <img src={hero} alt="" className="w-32 h-32 object-contain" />
       </div>
 
       <header className="mb-8 text-center">

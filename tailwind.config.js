@@ -49,15 +49,10 @@ export default {
           '60%': { transform: 'scale(1.05)', opacity: '1' },
           '100%': { transform: 'scale(1)' },
         },
-        'float-y': {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-4px)' },
-        },
       },
       animation: {
         'toast-in': 'toast-in 0.28s cubic-bezier(0.34,1.56,0.64,1) forwards',
         'pop': 'pop 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards',
-        'float-y': 'float-y 3s ease-in-out infinite',
       },
     },
   },
