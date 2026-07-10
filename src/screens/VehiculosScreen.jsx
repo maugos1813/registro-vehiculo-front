@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Car, Loader2, Pencil, Search, Trash2, User } from 'lucide-react';
+import { Car, Loader2, Pencil, Plus, Search, Trash2, User } from 'lucide-react';
 import { EstadoBadge } from '../components/ui/Badge';
 import BottomSheet from '../components/ui/BottomSheet';
-import { listarVehiculos, actualizarVehiculo, eliminarVehiculo } from '../api/vehiculos';
+import { listarVehiculos, actualizarVehiculo, crearVehiculo, eliminarVehiculo } from '../api/vehiculos';
 import { ultimoEstadoVehiculo } from '../api/registros';
 import { formatRelativo } from '../utils/format';
 import { useToast } from '../context/ToastContext';
@@ -21,6 +21,9 @@ export default function VehiculosScreen() {
   const [aEditar, setAEditar] = useState(null);
   const [formEdicion, setFormEdicion] = useState({ targa: '', modelo: '' });
   const [guardando, setGuardando] = useState(false);
+  const [agregando, setAgregando] = useState(false);
+  const [formNuevo, setFormNuevo] = useState({ targa: '', modelo: '' });
+  const [creando, setCreando] = useState(false);
 
   async function cargar() {
     setCargando(true);
@@ -91,6 +94,26 @@ export default function VehiculosScreen() {
     }
   }
 
+  async function confirmarCreacion(e) {
+    e.preventDefault();
+    if (!formNuevo.targa.trim()) return;
+    setCreando(true);
+    try {
+      const nuevo = await crearVehiculo({
+        targa: formNuevo.targa.trim(),
+        modelo: formNuevo.modelo.trim(),
+      });
+      setItems((prev) => [{ ...nuevo, ultimo: null, tomado: false }, ...prev]);
+      showToast(`Vehículo ${nuevo.targa} agregado`, 'success');
+      setAgregando(false);
+      setFormNuevo({ targa: '', modelo: '' });
+    } catch (err) {
+      showToast(err.message || 'No se pudo agregar el vehículo', 'error');
+    } finally {
+      setCreando(false);
+    }
+  }
+
   async function confirmarEliminarVehiculo() {
     if (!aEliminar) return;
     setEliminando(true);
@@ -108,11 +131,26 @@ export default function VehiculosScreen() {
 
   return (
     <div className="px-5 pt-6 pb-32 max-w-md md:max-w-3xl lg:max-w-5xl mx-auto">
-      <header className="mb-5">
-        <h1 className="font-display font-extrabold text-[26px] text-ink">Flota</h1>
-        <p className="text-muted text-sm mt-1">
-          {cargando ? 'Cargando estado…' : `${enUso} en uso · ${filtrados.length - enUso} libres`}
-        </p>
+      <header className="mb-5 flex items-center justify-between gap-3">
+        <div>
+          <h1 className="font-display font-extrabold text-[26px] text-ink">Flota</h1>
+          <p className="text-muted text-sm mt-1">
+            {cargando ? 'Cargando estado…' : `${enUso} en uso · ${filtrados.length - enUso} libres`}
+          </p>
+        </div>
+        {esAdmin && (
+          <button
+            type="button"
+            onClick={() => {
+              setFormNuevo({ targa: '', modelo: '' });
+              setAgregando(true);
+            }}
+            title="Agregar vehículo"
+            className="shrink-0 w-11 h-11 rounded-full bg-toma text-white shadow-floating flex items-center justify-center active:scale-95 transition-transform"
+          >
+            <Plus size={20} />
+          </button>
+        )}
       </header>
 
       <div className="relative mb-5">
@@ -205,6 +243,49 @@ export default function VehiculosScreen() {
           ))}
         </div>
       )}
+
+      <BottomSheet open={agregando} onClose={() => setAgregando(false)} title="Agregar vehículo">
+        <form onSubmit={confirmarCreacion} className="space-y-4">
+          <div>
+            <label className="block text-[11px] font-semibold uppercase tracking-wide text-muted mb-1.5 ml-1">
+              Targa
+            </label>
+            <div className="relative">
+              <Car size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
+              <input
+                type="text"
+                autoFocus
+                value={formNuevo.targa}
+                onChange={(e) => setFormNuevo((f) => ({ ...f, targa: e.target.value }))}
+                placeholder="Ej. AB123CD"
+                className="w-full h-12 pl-11 pr-4 rounded-pill bg-canvas border border-line focus:border-toma focus:outline-none text-[15px] placeholder:text-muted/70 transition-colors"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold uppercase tracking-wide text-muted mb-1.5 ml-1">
+              Modelo (opcional)
+            </label>
+            <input
+              type="text"
+              value={formNuevo.modelo}
+              onChange={(e) => setFormNuevo((f) => ({ ...f, modelo: e.target.value }))}
+              placeholder="Ej. Renault Kangoo"
+              className="w-full h-12 px-4 rounded-pill bg-canvas border border-line focus:border-toma focus:outline-none text-[15px] placeholder:text-muted/70 transition-colors"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={creando || !formNuevo.targa.trim()}
+            className={`w-full h-12 rounded-pill font-display font-bold flex items-center justify-center gap-2 transition-colors ${
+              formNuevo.targa.trim() ? 'bg-toma text-white' : 'bg-line text-muted'
+            }`}
+          >
+            {creando ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+            Agregar vehículo
+          </button>
+        </form>
+      </BottomSheet>
 
       <BottomSheet open={!!aEliminar} onClose={() => setAEliminar(null)} title="Eliminar vehículo">
         {aEliminar && (
